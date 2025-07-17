@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>0 → kość → 10 losowych → end</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;background:#000}
+    img{position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;
+        object-position:center;user-select:none;cursor:pointer}
+    #back{position:fixed;top:12px;left:12px;padding:6px 10px;background:rgba(255,255,255,.2);
+          color:#fff;font:bold 16px sans-serif;border-radius:4px;z-index:9;user-select:none;cursor:pointer}
+    #back.disabled{opacity:.4;cursor:default}
+    #counter{position:fixed;top:12px;right:12px;padding:6px 10px;background:rgba(255,255,255,.2);
+             color:#fff;font:bold 18px sans-serif;border-radius:4px;z-index:9;pointer-events:none}
+  </style>
+</head>
+<body>
+
+<div id="back" class="disabled">Back</div>
+<div id="counter">Turn: 0</div>
+<img id="viewer" alt="viewer">
+
+<script>
+/* ── konfiguracja ───────────────────────────── */
+const IMG_FOLDER   = 'img/';      // intro, pula 1-16, end
+const DICE_FOLDER  = 'Kosci/';    // pliki K1–K15.jpg
+const EXT          = '.jpg';
+
+const DICE_MAX     = 15;          // mamy 15 plików K1…K15
+const POOL_TOTAL   = 16;          // pula 1–16.jpg
+const PICKS_PER_RUN= 10;          // losujemy 10 unikalnych z puli
+/* ───────────────────────────────────────────── */
+
+const $img = document.getElementById('viewer');
+const $back= document.getElementById('back');
+const $cnt = document.getElementById('counter');
+
+let state; // { dice:'K7', pool:[ ... ], pos }
+initRound();
+
+/* ---------- pomocnicze ---------- */
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function initRound(){
+  const diceNum = Math.floor(Math.random() * DICE_MAX) + 1;   // 1..15
+  const dice    = 'K' + diceNum;                              // "K7" itd.
+  const pool    = shuffle([...Array(POOL_TOTAL).keys()].map(i=>i+1))
+                 .slice(0, PICKS_PER_RUN).map(String);
+  state = { dice, pool, pos:-1 };       // start od 0.jpg
+  render();
+}
+function currentCode(){
+  if(state.pos===-1)                return '0';
+  if(state.pos===0)                 return state.dice;          // kość Kx
+  if(state.pos<=PICKS_PER_RUN)      return state.pool[state.pos-1];
+  return 'end';
+}
+function updateCounter(){
+  if(state.pos<=0)                    $cnt.textContent='Turn: 0';
+  else if(state.pos<=PICKS_PER_RUN)   $cnt.textContent='Turn: '+state.pos;
+  else                                $cnt.textContent='End';
+}
+function updateBack(){ $back.classList.toggle('disabled', state.pos<=-1); }
+
+function render(){
+  const code   = currentCode();
+  const folder = (state.pos===0) ? DICE_FOLDER : IMG_FOLDER; // kość z /Kosci/
+  $img.src = folder + code + EXT;
+  updateCounter();
+  updateBack();
+}
+/* ---------- nawigacja ---------- */
+function next(){
+  if(state.pos === PICKS_PER_RUN + 1){   // kliknięto end → restart
+    initRound(); return;
+  }
+  state.pos++;
+  render();
+}
+function prev(){
+  if(state.pos<=-1) return;
+  state.pos--;
+  render();
+}
+
+/* ---------- zdarzenia ---------- */
+$img.addEventListener('click', next);
+$back.addEventListener('click', ()=>{ if(!$back.classList.contains('disabled')) prev(); });
+
+</script>
+</body>
+</html>
